@@ -215,13 +215,29 @@ a {
   letter-spacing: 0.8px;
 }
 
+.sidebar-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .mobile-close-btn {
   display: none;
-  margin-left: auto;
-  background: transparent;
-  color: var(--slate-400);
-  padding: 6px;
-  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.mobile-close-btn:hover {
+  background: rgba(225, 29, 72, 0.4);
+  border-color: var(--crimson-500);
 }
 
 .sidebar-status-banner {
@@ -460,7 +476,7 @@ a {
   justify-content: space-between;
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 50;
 }
 
 .topbar-left {
@@ -1178,9 +1194,21 @@ a {
   color: var(--slate-900);
 }
 
-.embedded-map-container {
+/* ==========================================================================
+   LEAFLET MAP CONTAINER & STACKING ISOLATION
+   Prevents Leaflet controls (+/-), popups, and tiles from bleeding into the
+   topbar (menu bar), sidebar drawer, or mobile bottom navigation.
+   ========================================================================== */
+
+.user-location-map,
+.embedded-map-container,
+.map-view-card {
+  position: relative;
+  z-index: 1;
+  isolation: isolate; /* CSS isolation encapsulates all internal Leaflet z-indexes */
   border-radius: var(--radius-md);
   overflow: hidden;
+  background: white;
   border: 1px solid var(--slate-200);
 }
 
@@ -1190,14 +1218,110 @@ a {
   border: none;
 }
 
-.embedded-map-container .map-toolbar {
-  padding: 12px 16px;
-  background: var(--slate-50);
-  border-bottom: 1px solid var(--slate-200);
+.embedded-map-container .leaflet-container {
+  height: 350px !important;
 }
 
-.embedded-map-container .leaflet-container {
-  height: 340px !important;
+.map-view-card .leaflet-container {
+  height: 480px !important;
+}
+
+/* Base Map Toolbar Styling */
+.map-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--slate-200);
+  gap: 12px;
+}
+
+.map-toolbar-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.map-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  background: white;
+  border: 1px solid var(--slate-200);
+  color: var(--slate-700);
+}
+
+.map-status-pill.active-alert {
+  background: var(--crimson-50);
+  border-color: rgba(225, 29, 72, 0.3);
+  color: var(--crimson-600);
+}
+
+.btn-find-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  color: var(--blue-600);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow-xs);
+}
+
+.btn-find-location:hover {
+  background: var(--blue-50);
+  border-color: var(--blue-600);
+  color: var(--blue-700);
+}
+
+/* Contain Leaflet z-indexes so they NEVER exceed the map card */
+.leaflet-container {
+  z-index: 1 !important;
+  font-family: var(--font-sans) !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 15 !important;
+}
+
+.leaflet-control {
+  z-index: 15 !important;
+}
+
+.leaflet-pane {
+  z-index: 5 !important;
+}
+
+.leaflet-tile-pane {
+  z-index: 2 !important;
+}
+
+.leaflet-overlay-pane {
+  z-index: 6 !important;
+}
+
+.leaflet-shadow-pane {
+  z-index: 7 !important;
+}
+
+.leaflet-marker-pane {
+  z-index: 8 !important;
+}
+
+.leaflet-popup-pane {
+  z-index: 12 !important;
 }
 
 /* Active Emergency Alert Banner on Dashboard */
@@ -2791,9 +2915,10 @@ a {
 .mobile-overlay-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.7);
   backdrop-filter: blur(4px);
-  z-index: 45;
+  z-index: 90;
+  animation: modal-fade-in 0.25s ease-out;
 }
 
 .mobile-bottom-bar {
@@ -2802,31 +2927,40 @@ a {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 64px;
-  background: rgba(255, 255, 255, 0.92);
+  height: 60px;
+  background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(16px);
-  border-top: 1px solid var(--slate-200);
-  z-index: 40;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 70;
   justify-content: space-around;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .mobile-nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  color: var(--slate-500);
-  font-size: 11px;
+  justify-content: center;
+  gap: 3px;
+  color: var(--slate-400);
+  font-size: 10px;
   font-weight: 700;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
   transition: var(--transition);
+  flex: 1;
+  text-decoration: none;
 }
 
 .mobile-nav-item.active {
-  color: var(--crimson-600);
+  color: var(--crimson-500);
+}
+
+.mobile-nav-item.active svg {
+  color: var(--crimson-500);
+  transform: scale(1.1);
 }
 
 /* ==========================================================================
@@ -2846,24 +2980,41 @@ a {
 }
 
 @media (max-width: 900px) {
-  .app-sidebar {
+  /* Sidebar Drawer on Mobile / Tablets */
+  .app-sidebar,
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    z-index: 100;
     transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: none;
   }
 
-  .app-sidebar.open {
+  .app-sidebar.open,
+  .sidebar.open {
     transform: translateX(0);
+    box-shadow: 12px 0 35px rgba(0, 0, 0, 0.55);
   }
 
   .mobile-close-btn {
-    display: block;
+    display: flex !important;
   }
 
   .app-main-wrapper {
     margin-left: 0;
+    width: 100%;
+    min-width: 0;
   }
 
   .mobile-hamburger-btn {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
   }
 
   .mobile-bottom-bar {
@@ -2871,7 +3022,7 @@ a {
   }
 
   .app-page-body {
-    padding: 20px 16px 85px;
+    padding: 16px 14px 85px;
   }
 
   .profile-grid {
@@ -2884,42 +3035,247 @@ a {
 }
 
 @media (max-width: 600px) {
+  /* Topbar on mobile */
+  .app-topbar {
+    height: 60px;
+    padding: 0 14px;
+  }
+
+  .topbar-headings h1 {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 170px;
+  }
+
+  .topbar-headings p {
+    display: none;
+  }
+
+  .topbar-right {
+    gap: 8px;
+  }
+
+  .topbar-right .live-status-pill {
+    display: none;
+  }
+
+  .user-name-label {
+    display: none;
+  }
+
+  .avatar-chip {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  /* SOS Hero on mobile */
   .sos-hero-card {
-    padding: 24px 20px;
+    padding: 20px 16px;
+    border-radius: var(--radius-lg);
   }
 
   .sos-hero-content h2 {
-    font-size: 22px;
+    font-size: 20px;
+  }
+
+  .sos-hero-content p {
+    font-size: 13px;
+  }
+
+  .sos-badge-wrapper {
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .sos-actions-row {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
 
   .sos-main-trigger-btn {
+    width: 100%;
     justify-content: center;
+    padding: 16px;
   }
 
   .sos-emergency-types {
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
   }
 
   .chip-action {
-    flex: 1;
+    flex-direction: column;
+    padding: 10px 4px;
+    font-size: 11px;
+    gap: 4px;
+    text-align: center;
     justify-content: center;
   }
 
+  /* Stats on mobile */
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
+  .stat-card {
+    padding: 14px;
+  }
+
+  .stat-content h3 {
+    font-size: 18px;
+  }
+
+  /* Quick hotlines on mobile */
   .hotlines-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
-  .topbar-right .live-status-pill {
-    display: none;
+  .hotline-card {
+    padding: 12px 14px;
+  }
+
+  /* Active emergency banner on mobile */
+  .emergency-active-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px 14px;
+    gap: 14px;
+  }
+
+  .emergency-banner-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .btn-scroll-map,
+  .btn-resolve-alert {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  /* Radar Map on mobile */
+  .user-location-map .leaflet-container {
+    height: 330px !important;
+  }
+
+  .map-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .btn-find-location {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Modals on mobile */
+  .sos-modal-card,
+  .resolve-confirm-card {
+    padding: 24px 18px;
+    max-width: 95vw;
+    border-radius: var(--radius-lg);
+  }
+
+  .modal-actions-row,
+  .resolve-modal-actions {
+    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Notification Permission banner on mobile */
+  .notification-permission-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .btn-enable-notifications {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Control bar and map header on mobile */
+  .map-control-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .filter-chips {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filter-chip {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .btn-emergency-call {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .btn-clear-history {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* History list on mobile */
+  .history-search-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .history-card {
+    padding: 16px 14px;
+  }
+
+  .history-card-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .history-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  /* Layout container constraints to prevent horizontal overflow */
+  .app-shell,
+  .app-main-wrapper {
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 }
 

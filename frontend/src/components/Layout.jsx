@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -21,6 +21,30 @@ function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
+  // Lock body scroll when mobile drawer is open to prevent background scrolling
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
+  // Close mobile drawer on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+        setNotificationsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const navItems = [
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "Map", path: "/emergency-map", icon: MapPin },
@@ -33,19 +57,37 @@ function Layout() {
   const getPageTitle = () => {
     switch (location.pathname) {
       case "/dashboard":
-        return { title: "Safety Dashboard", subtitle: "Live sector overview & community safety network" };
+        return {
+          title: "Safety Dashboard",
+          subtitle: "Live sector overview & community safety network",
+        };
       case "/emergency-map":
       case "/map":
-        return { title: "Emergency Radar Map", subtitle: "Live GPS tracking and neighbourhood safe havens" };
+        return {
+          title: "Emergency Radar Map",
+          subtitle: "Live GPS tracking and neighbourhood safe havens",
+        };
       case "/report-emergency":
-        return { title: "Report Emergency", subtitle: "Submit incident details to notify nearby responders" };
+        return {
+          title: "Report Emergency",
+          subtitle: "Submit incident details to notify nearby responders",
+        };
       case "/emergency-history":
       case "/history":
-        return { title: "Incident History", subtitle: "Verified community incident reports & resolutions" };
+        return {
+          title: "Incident History",
+          subtitle: "Verified community incident reports & resolutions",
+        };
       case "/profile":
-        return { title: "User Profile", subtitle: "Personal credentials, location permissions & security" };
+        return {
+          title: "User Profile",
+          subtitle: "Personal credentials, location permissions & security",
+        };
       default:
-        return { title: "NECN Safety Network", subtitle: "Neighbourhood Emergency Communication Network" };
+        return {
+          title: "NECN Safety Network",
+          subtitle: "Neighbourhood Emergency Communication Network",
+        };
     }
   };
 
@@ -59,7 +101,7 @@ function Layout() {
 
   return (
     <div className="app-shell">
-      {/* Reusable Sidebar Navigation (Step 11) */}
+      {/* Reusable Sidebar Navigation (Desktop + Mobile Drawer) */}
       <Sidebar
         mobileMenuOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -71,6 +113,7 @@ function Layout() {
         <header className="app-topbar">
           <div className="topbar-left">
             <button
+              type="button"
               className="mobile-hamburger-btn"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open menu"
@@ -91,6 +134,7 @@ function Layout() {
 
             <div className="notifications-wrapper">
               <button
+                type="button"
                 className="icon-action-btn"
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                 aria-label="View notifications"
@@ -111,7 +155,10 @@ function Layout() {
                         <CheckCircle size={16} />
                       </div>
                       <div>
-                        <p><strong>System Online:</strong> Your GPS sector node is operational.</p>
+                        <p>
+                          <strong>System Online:</strong> Your GPS sector node
+                          is operational.
+                        </p>
                         <small>Just now</small>
                       </div>
                     </div>
@@ -120,7 +167,10 @@ function Layout() {
                         <Activity size={16} />
                       </div>
                       <div>
-                        <p><strong>Safe Haven Check:</strong> 3 medical stations active near you.</p>
+                        <p>
+                          <strong>Safe Haven Check:</strong> 3 medical stations
+                          active near you.
+                        </p>
                         <small>15m ago</small>
                       </div>
                     </div>
@@ -130,13 +180,16 @@ function Layout() {
             </div>
 
             <button
+              type="button"
               className="topbar-profile-btn"
               onClick={() => navigate("/profile")}
               title="View Profile"
             >
               <div className="avatar-chip">{userInitial}</div>
               <span className="user-name-label">
-                {user?.displayName ? user.displayName.split(" ")[0] : "Profile"}
+                {user?.displayName
+                  ? user.displayName.split(" ")[0]
+                  : "Profile"}
               </span>
             </button>
           </div>
@@ -148,30 +201,41 @@ function Layout() {
         </main>
 
         <footer className="app-global-footer">
-          <p>NECN © 2026 · Neighbourhood Emergency Communication Network · High-Reliability Safety Architecture</p>
+          <p>
+            NECN © 2026 · Neighbourhood Emergency Communication Network ·
+            High-Reliability Safety Architecture
+          </p>
         </footer>
       </div>
 
-      {/* Mobile Backdrop Overlay */}
+      {/* Mobile Backdrop Overlay - closes drawer on touch/click */}
       {mobileMenuOpen && (
         <div
           className="mobile-overlay-backdrop"
           onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="mobile-bottom-bar">
+      <nav className="mobile-bottom-bar" aria-label="Mobile Navigation">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
               key={item.path}
               to={item.path}
-              className={({ isActive }) => `mobile-nav-item ${isActive ? "active" : ""}`}
+              className={({ isActive }) =>
+                `mobile-nav-item ${isActive ? "active" : ""}`
+              }
             >
-              <Icon size={20} />
-              <span>{item.name.replace("Emergency ", "").replace("Incident ", "").replace("My ", "")}</span>
+              <Icon size={19} />
+              <span>
+                {item.name
+                  .replace("Emergency ", "")
+                  .replace("Incident ", "")
+                  .replace("My ", "")}
+              </span>
             </NavLink>
           );
         })}
@@ -181,4 +245,3 @@ function Layout() {
 }
 
 export default Layout;
-

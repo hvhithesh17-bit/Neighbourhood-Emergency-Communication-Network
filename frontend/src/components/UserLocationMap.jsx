@@ -8,7 +8,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, LocateFixed, Radio } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import { resolveEmergency } from "../services/emergencyService";
 
@@ -175,18 +175,28 @@ function UserLocationMap({
   return (
     <div className="user-location-map">
       <div className="map-toolbar">
-        <div>
-          <h2>Sector Radar Map</h2>
-          {activeEmergenciesList.length > 0 && (
-            <span className="emergency-radar-badge">
-              🚨 {activeEmergenciesList.length} ACTIVE EMERGENCY SIGNAL
-              {activeEmergenciesList.length > 1 ? "S" : ""} WITHIN 5KM
+        <div className="map-toolbar-status">
+          {activeEmergenciesList.length > 0 ? (
+            <span className="map-status-pill active-alert">
+              🚨 {activeEmergenciesList.length} Active Emergency Signal
+              {activeEmergenciesList.length > 1 ? "s" : ""} in 5km Sector
+            </span>
+          ) : (
+            <span className="map-status-pill">
+              <Radio size={14} color="#10b981" />
+              <span>GPS Sector Mesh: All Clear</span>
             </span>
           )}
         </div>
 
-        <button onClick={findMyLocation} className="btn-find-location">
-          Find My Location
+        <button
+          type="button"
+          onClick={findMyLocation}
+          className="btn-find-location"
+          title="Center map on your device coordinates"
+        >
+          <LocateFixed size={15} />
+          <span>Find My Location</span>
         </button>
       </div>
 

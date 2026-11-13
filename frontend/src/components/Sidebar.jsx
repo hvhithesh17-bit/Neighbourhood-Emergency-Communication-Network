@@ -1,4 +1,3 @@
-
 import {
   ShieldAlert,
   LayoutDashboard,
@@ -47,6 +46,7 @@ function Sidebar({ mobileMenuOpen = false, onClose }) {
   ];
 
   async function handleLogout() {
+    onClose?.();
     try {
       await signOut(auth);
       navigate("/login");
@@ -56,19 +56,20 @@ function Sidebar({ mobileMenuOpen = false, onClose }) {
   }
 
   return (
-    <aside className={`sidebar ${mobileMenuOpen ? "open" : ""}`}>
+    <aside className={`app-sidebar sidebar ${mobileMenuOpen ? "open" : ""}`}>
       <div className="sidebar-logo">
-        <ShieldAlert size={30} />
-        <h2>NECN</h2>
-        {onClose && (
-          <button
-            className="mobile-close-btn"
-            onClick={onClose}
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
-        )}
+        <div className="sidebar-brand-group">
+          <ShieldAlert size={28} />
+          <h2>NECN</h2>
+        </div>
+        <button
+          type="button"
+          className="mobile-close-btn"
+          onClick={onClose}
+          aria-label="Close navigation menu"
+        >
+          <X size={20} />
+        </button>
       </div>
 
       <nav className="sidebar-nav">
@@ -91,11 +92,12 @@ function Sidebar({ mobileMenuOpen = false, onClose }) {
       </nav>
 
       <button
+        type="button"
         className="logout-button"
         onClick={handleLogout}
       >
         <LogOut size={20} />
-        Logout
+        <span>Logout</span>
       </button>
     </aside>
   );
