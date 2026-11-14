@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -24,6 +24,7 @@ import { getCurrentLocation } from "../services/locationService";
 import {
   broadcastEmergency,
   subscribeToActiveEmergencies,
+  subscribeToActiveResponders,
   resolveEmergency,
 } from "../services/emergencyService";
 import {
@@ -40,6 +41,10 @@ function Dashboard() {
   const [sosCountdown, setSosCountdown] = useState(5);
   const [sosConfirmed, setSosConfirmed] = useState(false);
   const [selectedEmergency, setSelectedEmergency] = useState("Medical Emergency");
+  const isBroadcastingRef = useRef(false);
+
+  // Active Responders State (real-time from registered_users within 5km)
+  const [activeRespondersCount, setActiveRespondersCount] = useState(1);
 
   // Device Location State
   const [acquiredLocation, setAcquiredLocation] = useState(null);
@@ -152,6 +157,26 @@ function Dashboard() {
     };
   }, [acquiredLocation, myActiveEmergencyId]);
 
+  // Real-time Cloud Firestore listener for active registered responders within 5km radius
+  useEffect(() => {
+    const unsubscribe = subscribeToActiveResponders(
+      acquiredLocation,
+      5, // 5km radius
+      (count) => {
+        setActiveRespondersCount(count);
+      },
+      (err) => {
+        console.warn("Active responders listener notice:", err.message);
+      }
+    );
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, [acquiredLocation]);
+
   // Request browser notification permission
   const handleEnableNotifications = async () => {
     const result = await requestNotificationPermission();
@@ -164,11 +189,35 @@ function Dashboard() {
   // 3. Broadcast SOS to Firestore (Cross-device sync)
   const triggerEmergencyBroadcast = useCallback(
     async (coords) => {
+      // Guard against duplicate concurrent or successive executions
+      if (isBroadcastingRef.current) {
+        return;
+      }
+      isBroadcastingRef.current = true;
+
       const targetLoc = coords || acquiredLocation || {
         latitude: 12.9716,
         longitude: 77.5946,
         accuracy: 50,
       };
+
+      // Immediate UI transition to confirmed state
+      setSosConfirmed(true);
+
+      // Immediate local state update for fast response
+      const emergencyData = {
+        type: selectedEmergency,
+        coordinates: [targetLoc.latitude, targetLoc.longitude],
+        accuracy: targetLoc.accuracy || 50,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        status: "Active Distress Signal",
+        isMine: true,
+      };
+
+      setActiveEmergency(emergencyData);
 
       try {
         // Send emergency to Cloud Firestore so all nearby devices receive it in real-time
@@ -191,45 +240,35 @@ function Dashboard() {
       } catch (err) {
         console.warn("Firestore broadcast notice:", err.message);
       }
-
-      // Immediate local state update for fast response
-      const emergencyData = {
-        type: selectedEmergency,
-        coordinates: [targetLoc.latitude, targetLoc.longitude],
-        accuracy: targetLoc.accuracy || 50,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        status: "Active Distress Signal",
-        isMine: true,
-      };
-
-      setActiveEmergency(emergencyData);
-      setSosConfirmed(true);
     },
     [acquiredLocation, selectedEmergency]
   );
 
-  // Auto-countdown timer inside SOS modal
+  // Auto-countdown timer inside SOS modal (clean interval outside React state updater)
   useEffect(() => {
     if (!sosModalOpen || sosConfirmed) return;
 
+    let remaining = 5;
     const timer = setInterval(() => {
-      setSosCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          triggerEmergencyBroadcast(acquiredLocation);
-          return 0;
-        }
-        return prev - 1;
-      });
+      remaining -= 1;
+      setSosCountdown(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(timer);
+        triggerEmergencyBroadcast(acquiredLocation);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [sosModalOpen, sosConfirmed, acquiredLocation, triggerEmergencyBroadcast]);
+  }, [
+    sosModalOpen,
+    sosConfirmed,
+    acquiredLocation,
+    triggerEmergencyBroadcast,
+  ]);
 
   const handleOpenSOS = async (type = "General Emergency") => {
+    isBroadcastingRef.current = false;
     setSelectedEmergency(type);
     setSosCountdown(5);
     setSosConfirmed(false);
@@ -255,6 +294,7 @@ function Dashboard() {
   };
 
   const handleCancelSOS = () => {
+    isBroadcastingRef.current = false;
     setSosModalOpen(false);
     setSosCountdown(5);
   };
@@ -486,10 +526,14 @@ function Dashboard() {
             <div className="stat-content">
               <span className="stat-label">Active Responders</span>
               <div className="stat-value-group">
-                <h3>14</h3>
+                <h3>{activeRespondersCount}</h3>
                 <span className="stat-trend positive">● Online</span>
               </div>
-              <small>Verified volunteers within 5km</small>
+              <small>
+                {activeRespondersCount === 1
+                  ? "1 active responder node (You) within 5km"
+                  : `${activeRespondersCount} active volunteers & responders within 5km`}
+              </small>
             </div>
           </div>
 
@@ -827,7 +871,10 @@ function Dashboard() {
                   </button>
                   <button
                     className="btn-send-now"
-                    onClick={() => triggerEmergencyBroadcast(acquiredLocation)}
+                    onClick={() => {
+                      setSosCountdown(0);
+                      triggerEmergencyBroadcast(acquiredLocation);
+                    }}
                   >
                     SEND NOW (SKIP COUNTDOWN)
                   </button>

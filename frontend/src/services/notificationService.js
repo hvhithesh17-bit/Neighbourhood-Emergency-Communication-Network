@@ -94,18 +94,32 @@ export function playEmergencyAlertSound() {
  * @param {Object} coords { latitude, longitude, accuracy }
  */
 export async function registerUserDeviceLocation(coords) {
+  if (!coords) return;
+
   const user = auth.currentUser;
-  if (!user || !coords) return;
+  let uid = user?.uid;
+  if (!uid) {
+    try {
+      uid = localStorage.getItem("necn_device_uid");
+      if (!uid) {
+        uid = "dev_" + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem("necn_device_uid", uid);
+      }
+    } catch {
+      uid = "guest_device";
+    }
+  }
 
   try {
-    const userRef = doc(db, "registered_users", user.uid);
+    const userRef = doc(db, "registered_users", uid);
     await setDoc(
       userRef,
       {
-        uid: user.uid,
-        email: user.email,
+        uid,
+        email: user?.email || "verified_resident@necn.local",
         displayName:
-          user.displayName || user.email?.split("@")[0] || "Community Member",
+          user?.displayName ||
+          (user?.email ? user.email.split("@")[0] : "Community Responder"),
         latitude: Number(coords.latitude),
         longitude: Number(coords.longitude),
         accuracy: Number(coords.accuracy || 50),

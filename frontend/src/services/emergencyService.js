@@ -188,3 +188,82 @@ export async function resolveEmergency(emergencyId, resolverData = {}) {
     throw error;
   }
 }
+
+/**
+ * Subscribes in real-time to active registered users/responders within the specified radius.
+ * @param {Object|null} userCoords { latitude, longitude } of current user
+ * @param {number} maxRadiusKm Max radius in km (default 5km)
+ * @param {Function} onUpdate Callback receiving (activeCount, respondersList)
+ * @param {Function} onError Optional error callback
+ * @returns {Function} Unsubscribe function to stop listening
+ */
+export function subscribeToActiveResponders(
+  userCoords,
+  maxRadiusKm = 5,
+  onUpdate,
+  onError
+) {
+  try {
+    const q = collection(db, "registered_users");
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const responders = [];
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const rLat = Number(data.latitude);
+          const rLon = Number(data.longitude);
+
+          if (isNaN(rLat) || isNaN(rLon)) return;
+
+          let distanceKm = null;
+          if (
+            userCoords &&
+            userCoords.latitude != null &&
+            userCoords.longitude != null
+          ) {
+            const d = calculateDistanceKm(
+              userCoords.latitude,
+              userCoords.longitude,
+              rLat,
+              rLon
+            );
+            distanceKm = d != null ? Number(d.toFixed(2)) : null;
+          }
+
+          responders.push({
+            id: docSnap.id,
+            ...data,
+            latitude: rLat,
+            longitude: rLon,
+            distanceKm,
+          });
+        });
+
+        // Filter responders within maxRadiusKm (or all if coords not locked yet)
+        const nearbyResponders = responders.filter((r) => {
+          if (r.distanceKm == null) return true;
+          return r.distanceKm <= maxRadiusKm;
+        });
+
+        // Ensure at least 1 (the current user/node is online and active)
+        const count = Math.max(1, nearbyResponders.length);
+        if (onUpdate) {
+          onUpdate(count, nearbyResponders);
+        }
+      },
+      (error) => {
+        console.warn("Responders real-time subscription notice:", error.message);
+        if (onError) onError(error);
+      }
+    );
+
+    return unsubscribe;
+  } catch (err) {
+    console.error("Error setting up responders listener:", err);
+    if (onError) onError(err);
+    return () => {};
+  }
+}
